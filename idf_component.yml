@@ -1,4 +1,4 @@
 version: "1.0.0"
-description: "Real-time clock driver (rtc, i2c, ds1307, ds1302, date)"
+description: "Real-time clock driver (rtc, i2c, ds1307, ds1302, pcf8563, ds3231, date)"
 url: "https://github.com/zorxx/rtci2c"
 license: "MIT"

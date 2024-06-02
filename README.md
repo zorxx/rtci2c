@@ -5,6 +5,8 @@ This library currently supports the following platforms:
 * Linux i2c subsystem
 * esp-idf
 
+Source for this projecct can be found at [https://github.com/zorxx/rtci2c](https://github.com/zorxx/rtci2c).
+
 # Usage
 
 ## API
