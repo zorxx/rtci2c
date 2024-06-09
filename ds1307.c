@@ -27,7 +27,7 @@ static bool ds1307_get_datetime(void *rtci2c_ctx, struct tm *datetime)
    datetime->tm_mon = (DS1307_REG_GET(data, MONTH) - 1) % 12;
    datetime->tm_year = DS1307_REG_GET(data, YEAR) + 100;
 
-   if(DS1307_REG_GET_BIT(data, HOURS, HOURS_24_BIT))
+   if(DS1307_REG_GET_BIT(data, HOURS, HOURS_24_BIT) == 0)
       datetime->tm_hour = DS1307_REG_GET(data, HOURS_24);
    else
    {
@@ -41,15 +41,14 @@ static bool ds1307_get_datetime(void *rtci2c_ctx, struct tm *datetime)
 static bool ds1307_set_datetime(void *rtci2c_ctx, struct tm *datetime)
 {
    rtci2c_t *r = (rtci2c_t *) rtci2c_ctx;
-   uint8_t data[8];
+   uint8_t data[8] = {0};
 
    if(NULL == datetime)
       return false;
 
    data[DS1307_REG_SECONDS]    = RTC_DEC_TO_BCD(datetime->tm_sec % 60);
    data[DS1307_REG_MINUTES]    = RTC_DEC_TO_BCD(datetime->tm_min % 60);
-   data[DS1307_REG_HOURS]      = RTC_DEC_TO_BCD(datetime->tm_hour % 24);
-   data[DS1307_REG_HOURS]     |= (1 << DS1307_REG_HOURS_24_BIT);
+   data[DS1307_REG_HOURS]      = RTC_DEC_TO_BCD(datetime->tm_hour % 24); /* always set in 24-hour mode */
    data[DS1307_REG_DAYOFWEEK]  = RTC_DEC_TO_BCD((datetime->tm_wday % 7) + 1);
    data[DS1307_REG_DAYOFMONTH] = RTC_DEC_TO_BCD(datetime->tm_mday % 32);
    data[DS1307_REG_MONTH]      = RTC_DEC_TO_BCD((datetime->tm_mon % 12) + 1);

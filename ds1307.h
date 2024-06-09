@@ -27,8 +27,8 @@
 #define DS1307_REG_HOURS_24         2
    #define DS1307_REG_MASK_HOURS_24   0x3f
    #define DS1307_REG_MASK_HOURS_12   0x1f
-   #define DS1307_REG_HOURS_AMPM_BIT   5
-   #define DS1307_REG_HOURS_24_BIT     6
+   #define DS1307_REG_HOURS_AMPM_BIT   5 /* 1 = PM, 0 = AM */
+   #define DS1307_REG_HOURS_24_BIT     6 /* 1 = 12 hour, 0 = 24 hour*/
 
 #define DS1307_REG_DAYOFWEEK        3
    #define DS1307_REG_MASK_DAYOFWEEK  0x07
