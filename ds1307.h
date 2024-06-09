@@ -56,8 +56,6 @@
  * Helper Macros
  */
 
-
-
 #define DS1307_REG_GET(data, field) \
    RTC_BCD_TO_DEC(data[DS1307_REG_##field] & DS1307_REG_MASK_##field)
 #define DS1307_REG_GET_BIT(data, reg, bit) \

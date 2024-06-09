@@ -9,9 +9,8 @@
 #include <stdint.h>
 #include "rtci2c.h"
 
-typedef bool (*rtcdevice_init)(void *rtci2c_ctx);
-typedef bool (*rtcdevice_deinit)(void *rtci2c_ctx);
-typedef bool (*rtcdevice_get_datetime)(void *rtci2c_ctx, rtci2c_datetime *datetime);
+typedef bool (*pfn_rtcdevice_init)(void *rtci2c_ctx);
+typedef bool (*pfn_rtcdevice_datetime)(void *rtci2c_ctx, struct tm *datetime);
 
 typedef struct rtci2c_s
 {
@@ -20,9 +19,10 @@ typedef struct rtci2c_s
     uint8_t i2c_timeout;
     uint32_t i2c_speed;
 
-    rtcdevice_init devfn_init;
-    rtcdevice_init devfn_deinit;
-    rtcdevice_get_datetime devfn_get_datetime;
+    pfn_rtcdevice_init devfn_init;
+    pfn_rtcdevice_init devfn_deinit;
+    pfn_rtcdevice_datetime devfn_get_datetime;
+    pfn_rtcdevice_datetime devfn_set_datetime;
 
     void *lowlevel;
 } rtci2c_t;

@@ -60,10 +60,18 @@ bool rtci2c_deinit(rtci2c_context context)
    return true;
 }
 
-bool rtci2c_get_datetime(rtci2c_context context, rtci2c_datetime *datetime)
+bool rtci2c_get_datetime(rtci2c_context context, struct tm *datetime)
 {
    rtci2c_t *r = (rtci2c_t *) context;
    if(NULL == r->devfn_get_datetime)
       return false;
    return r->devfn_get_datetime(r, datetime);
+}
+
+bool rtci2c_set_datetime(rtci2c_context context, struct tm *datetime)
+{
+   rtci2c_t *r = (rtci2c_t *) context;
+   if(NULL == r->devfn_set_datetime)
+      return false;
+   return r->devfn_set_datetime(r, datetime);
 }

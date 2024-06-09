@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 
 /* linux */
 #if defined(__linux__)
@@ -38,23 +39,9 @@ typedef enum
    RTCI2C_DEVICE_DS3231 */
 } rtci2c_device_type;
 
-typedef struct s_rtci2c_datetime
-{
-   uint8_t seconds;
-   uint8_t minutes;
-   uint8_t hours;  /* 24-hour time */
-   uint8_t dayofweek; /* 0 = sunday, etc. */
-   uint8_t dayofmonth;
-   uint8_t month; /* 0 = january, etc. */
-   uint16_t year;
-} rtci2c_datetime;
-
-/* 0 = Sunday */
-extern const char *RTCI2C_DAY_OF_WEEK[];
-#define RTCI2C_DOW_TO_STRING(dow) RTCI2C_DAY_OF_WEEK[dow]
-
 rtci2c_context rtci2c_init(rtci2c_device_type device, uint8_t i2c_address, rtci2c_lowlevel_config *config);
 bool rtci2c_deinit(rtci2c_context context);
-bool rtci2c_get_datetime(rtci2c_context context, rtci2c_datetime *datetime);
+bool rtci2c_get_datetime(rtci2c_context context, struct tm *datetime);
+bool rtci2c_set_datetime(rtci2c_context context, struct tm *datetime);
 
 #endif /* _RTCI2C_H */

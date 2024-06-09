@@ -6,7 +6,7 @@
  * Device-specific Implementation Functions 
  */
 
-static bool ds1307_get_datetime(void *rtci2c_ctx, rtci2c_datetime *datetime)
+static bool ds1307_get_datetime(void *rtci2c_ctx, struct tm *datetime)
 {
    rtci2c_t *r = (rtci2c_t *) rtci2c_ctx;
    uint8_t data[8];
@@ -20,23 +20,46 @@ static bool ds1307_get_datetime(void *rtci2c_ctx, rtci2c_datetime *datetime)
       return false;
    }
 
-   datetime->seconds = DS1307_REG_GET(data, SECONDS);
-   datetime->minutes = DS1307_REG_GET(data, MINUTES);
-   datetime->dayofmonth = DS1307_REG_GET(data, DAYOFMONTH);
-   datetime->month = DS1307_REG_GET(data, MONTH);
-   datetime->year = DS1307_REG_GET(data, YEAR);
+   datetime->tm_sec = DS1307_REG_GET(data, SECONDS);
+   datetime->tm_min = DS1307_REG_GET(data, MINUTES);
+   datetime->tm_mday = DS1307_REG_GET(data, DAYOFMONTH);
+   datetime->tm_wday = (DS1307_REG_GET(data, DAYOFWEEK) - 1) % 7;
+   datetime->tm_mon = (DS1307_REG_GET(data, MONTH) - 1) % 12;
+   datetime->tm_year = DS1307_REG_GET(data, YEAR) + 100;
 
    if(DS1307_REG_GET_BIT(data, HOURS, HOURS_24_BIT))
-      datetime->hours = DS1307_REG_GET(data, HOURS_24);
+      datetime->tm_hour = DS1307_REG_GET(data, HOURS_24);
    else
    {
       bool ispm = DS1307_REG_GET_BIT(data, HOURS, HOURS_AMPM_BIT);
-      datetime->hours = DS1307_REG_GET(data, HOURS_12) + ((ispm) ? 12 : 0);
+      datetime->tm_hour = DS1307_REG_GET(data, HOURS_12) + ((ispm) ? 12 : 0);
    }
 
-   datetime->dayofweek = DS1307_REG_GET(data, DAYOFWEEK);
-   if(datetime->dayofweek > 0)
-      --(datetime->dayofweek); /* convert from 1-based index to 0-based index */
+   return true;
+}
+
+static bool ds1307_set_datetime(void *rtci2c_ctx, struct tm *datetime)
+{
+   rtci2c_t *r = (rtci2c_t *) rtci2c_ctx;
+   uint8_t data[8];
+
+   if(NULL == datetime)
+      return false;
+
+   data[DS1307_REG_SECONDS]    = RTC_DEC_TO_BCD(datetime->tm_sec % 60);
+   data[DS1307_REG_MINUTES]    = RTC_DEC_TO_BCD(datetime->tm_min % 60);
+   data[DS1307_REG_HOURS]      = RTC_DEC_TO_BCD(datetime->tm_hour % 24);
+   data[DS1307_REG_HOURS]     |= (1 << DS1307_REG_HOURS_24_BIT);
+   data[DS1307_REG_DAYOFWEEK]  = RTC_DEC_TO_BCD((datetime->tm_wday % 7) + 1);
+   data[DS1307_REG_DAYOFMONTH] = RTC_DEC_TO_BCD(datetime->tm_mday % 32);
+   data[DS1307_REG_MONTH]      = RTC_DEC_TO_BCD((datetime->tm_mon % 12) + 1);
+   data[DS1307_REG_YEAR]       = RTC_DEC_TO_BCD(datetime->tm_year % 100);
+
+   if(!rtci2c_ll_write(r, DS1307_REG_SECONDS, data, sizeof(data)))
+   {
+      RTCERR("Failed to set RTC");
+      return false;
+   }
 
    return true;
 }
@@ -87,5 +110,6 @@ bool ds1307_configure(rtci2c_t *ctx, uint8_t i2c_address)
    ctx->i2c_speed = DS1307_I2C_SPEED;
    ctx->devfn_init = ds1307_init;
    ctx->devfn_get_datetime = ds1307_get_datetime;
+   ctx->devfn_set_datetime = ds1307_set_datetime;
    return true;
 }

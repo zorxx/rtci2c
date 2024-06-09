@@ -6,6 +6,7 @@
 #define _RTCI2C_HELPERS_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 /* Debug messaging */
 #if defined(RTCI2C_DEBUG_ENABLE) && defined(__linux__)
@@ -25,5 +26,7 @@
 
 #define RTC_BCD_TO_DEC(bcd) \
    (((((((uint8_t)(bcd)) & 0xF0) >> 4) % 10) * 10) + ((((uint8_t)(bcd)) & 0x0F) % 10))
+#define RTC_DEC_TO_BCD(dec) \
+   ((((uint8_t)(dec) / 10) << 4) + ((uint8_t)(dec) % 10))
 
 #endif /* _RTCI2C_HELPERS_H */

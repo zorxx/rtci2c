@@ -35,19 +35,18 @@ void app_main(void)
    }
    else
    {
-      rtci2c_datetime d;
+      struct tm t;
 
       for(int i = 0; i < 100; ++i)
       {
-         if(!rtci2c_get_datetime(ctx, &d))
+         if(!rtci2c_get_datetime(ctx, &t))
          {
             ESP_LOGE(TAG, "Date/tate query failed");
          }
          else
          {
-            ESP_LOGI(TAG, "Current: %02u/%02u/%02u %u:%02u:%02u %s",
-               d.dayofmonth, d.month, d.year, d.hours, d.minutes,
-               d.seconds, RTCI2C_DOW_TO_STRING(d.dayofweek));
+            ESP_LOGI(TAG, "Current: %02u/%02u/%u %u:%02u:%02u",
+               t.tm_mday, t.tm_mon, t.tm_year, t.tm_hour, t.tm_min, t.tm_sec);
          }
          vTaskDelay(pdMS_TO_TICKS(100));
       }

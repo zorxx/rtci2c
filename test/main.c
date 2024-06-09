@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
    }
    else
    {
-      rtci2c_datetime datetime;
+      struct tm datetime;
       if(!rtci2c_get_datetime(ctx, &datetime))
       {
          RTCERR("Date/tate query failed");
