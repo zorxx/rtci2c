@@ -11,7 +11,7 @@ Source for this project can be found at [https://github.com/zorxx/rtci2c](https:
 
 ## API
 
-The API for this library can be found in the `include/rtci2c.h` header file.
+The API for this library can be found in the `include/rtci2c/rtci2c.h` header file.
 
 ## Portability
 
