@@ -7,7 +7,9 @@
 #include <errno.h>
 #include <string.h> /* strdup */
 #include <fcntl.h> /* open/close */
+#include <time.h> /* clock_gettime */
 #include <sys/ioctl.h>
+#include <pthread.h>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 #include "sys_linux.h"
@@ -21,8 +23,13 @@ typedef struct linux_rtci2c_s
     uint32_t timeout;
 } linux_i2c_t;
 
-i2c_lowlevel_context i2c_ll_init(uint8_t i2c_address, uint32_t i2c_speed, uint32_t i2c_timeout_ms,
-                                 i2c_lowlevel_config *config)
+typedef struct linux_mutex_s
+{
+   pthread_mutex_t mutex;
+} linux_mutex_t;
+
+i2c_lowlevel_context SYS_WEAK i2c_ll_init(uint8_t i2c_address, uint32_t i2c_speed, uint32_t i2c_timeout_ms,
+                                          i2c_lowlevel_config *config)
 {
    linux_i2c_t *l;
    int result = -1;
@@ -68,7 +75,7 @@ i2c_lowlevel_context i2c_ll_init(uint8_t i2c_address, uint32_t i2c_speed, uint32
    return (i2c_lowlevel_context) l;
 }
 
-bool i2c_ll_deinit(i2c_lowlevel_context ctx)
+bool SYS_WEAK i2c_ll_deinit(i2c_lowlevel_context ctx)
 {
    linux_i2c_t *l = (linux_i2c_t *) ctx;
    if(NULL == l)
@@ -83,7 +90,7 @@ bool i2c_ll_deinit(i2c_lowlevel_context ctx)
    return true;
 }
 
-bool i2c_ll_write_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint8_t length)
+bool SYS_WEAK i2c_ll_write_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint8_t length)
 {
    linux_i2c_t *l = (linux_i2c_t *) ctx;
    struct i2c_smbus_ioctl_data args;
@@ -114,7 +121,7 @@ bool i2c_ll_write_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint
    return false;
 }
 
-bool i2c_ll_write(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
+bool SYS_WEAK i2c_ll_write(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
 {
    linux_i2c_t *l = (linux_i2c_t *) ctx;
    int result = write(l->handle, data, length);
@@ -128,7 +135,7 @@ bool i2c_ll_write(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
    return false;
 }
 
-bool i2c_ll_read_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint8_t length)
+bool SYS_WEAK i2c_ll_read_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint8_t length)
 {
    linux_i2c_t *l = (linux_i2c_t *) ctx;
    struct i2c_smbus_ioctl_data args;
@@ -160,7 +167,7 @@ bool i2c_ll_read_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint8
    return false;
 }
 
-bool i2c_ll_read(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
+bool SYS_WEAK i2c_ll_read(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
 {
    linux_i2c_t *l = (linux_i2c_t *) ctx;
    int result = read(l->handle, data, length);
@@ -173,4 +180,47 @@ bool i2c_ll_read(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
    SERR("[%s] Failed (result %d, errno %d)", __func__, result, errno);
    memset(data,  0, length);
    return false;
+}
+
+mutex_lowlevel SYS_WEAK sys_mutex_init(void)
+{
+   linux_mutex_t *ctx = malloc(sizeof(*ctx));
+   if(NULL == ctx)
+      return NULL;
+   pthread_mutex_init(&ctx->mutex, NULL);
+   return ctx;
+}
+
+bool SYS_WEAK sys_mutex_deinit(mutex_lowlevel mutex)
+{
+   linux_mutex_t *ctx = (linux_mutex_t *) mutex;
+   if(NULL == ctx)
+      return true;
+   free(ctx);
+   return true;
+}
+
+bool SYS_WEAK sys_mutex_lock(mutex_lowlevel mutex)
+{
+   linux_mutex_t *ctx = (linux_mutex_t *) mutex;
+   pthread_mutex_lock(&ctx->mutex);
+   return true;
+}
+
+bool SYS_WEAK sys_mutex_unlock(mutex_lowlevel mutex)
+{
+   linux_mutex_t *ctx = (linux_mutex_t *) mutex;
+   pthread_mutex_unlock(&ctx->mutex);
+   return true;
+}
+
+uint64_t SYS_WEAK sys_microsecond_tick(void)
+{
+   struct timespec ts;
+   if(clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+   {
+      SERR("[%s] Failed to query time (errno %d)\n", __func__, errno);
+      memset(&ts, 0, sizeof(ts)); /* no reasonable recourse */
+   }
+   return ((uint64_t)ts.tv_nsec) / 1000 + (((uint64_t)ts.tv_sec) * 1000000UL);
 }

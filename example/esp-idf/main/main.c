@@ -22,6 +22,7 @@
 #define ESP_I2C_SDA  GPIO_NUM_21
 #define ESP_I2C_SCL  GPIO_NUM_22
 #define DEVICE_I2C_ADDRESS 0 /* let the library figure it out */
+static i2c_master_bus_handle_t i2c_bus;
 
 void app_main(void)
 {
@@ -48,10 +49,11 @@ void app_main(void)
       .glitch_ignore_cnt = 7,
       .flags.enable_internal_pullup = true,      
    };
-   if(i2c_new_master_bus(&bus_cfg, &config.bus) != ESP_OK)
+   if(i2c_new_master_bus(&bus_cfg, &i2c_bus) != ESP_OK)
    {
       ESP_LOGE(TAG, "Failed to initialize I2C bus");
    }
+   config.bus = &i2c_bus;
    #endif
 
    rtci2c_context *ctx = rtci2c_init(RTCI2C_DEVICE_DS1307, DEVICE_I2C_ADDRESS, &config);

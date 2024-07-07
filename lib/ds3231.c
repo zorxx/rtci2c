@@ -15,9 +15,9 @@
 static bool ds3231_init(void *rtci2c_ctx)
 {
    rtci2c_t *r = (rtci2c_t *) rtci2c_ctx;
-   uint8_t data[2]; 
+   uint8_t data[16]; 
 
-   if(!i2c_ll_read_reg(r->lowlevel, DS3231_REG_CONTROL, data, sizeof(data)))
+   if(!i2c_ll_read_reg(r->lowlevel, DS1307_REG_SECONDS, data, sizeof(data)))
    {
       SERR("[%s] Failed to query RTC", __func__);
       return false;

@@ -5,6 +5,7 @@
 #include <string.h>  /* memcpy */
 #include "freertos/FreeRTOS.h"
 #include "driver/i2c_master.h"
+#include "esp_timer.h"
 #include "sys_esp.h"
 #include "sys.h"
 #include "helpers.h"
@@ -13,16 +14,22 @@ typedef struct
 {
    i2c_lowlevel_config config;
    i2c_master_bus_handle_t bus;
+   bool bus_created;
    i2c_master_dev_handle_t device;
    uint32_t timeout;
 } esp_i2c_t;
+
+typedef struct
+{
+   SemaphoreHandle_t mutex;
+} esp_mutex_t;
 
 /* ----------------------------------------------------------------------------------------------
  * I2C low-level implementation for esp-idf 
  */
 
-i2c_lowlevel_context i2c_ll_init(uint8_t i2c_address, uint32_t i2c_speed, uint32_t i2c_timeout_ms,
-                                 i2c_lowlevel_config *config)
+i2c_lowlevel_context SYS_WEAK i2c_ll_init(uint8_t i2c_address, uint32_t i2c_speed, uint32_t i2c_timeout_ms,
+                                      i2c_lowlevel_config *config)
 {
    i2c_device_config_t dev_cfg = {
       .dev_addr_length = I2C_ADDR_BIT_LEN_7,
@@ -52,9 +59,13 @@ i2c_lowlevel_context i2c_ll_init(uint8_t i2c_address, uint32_t i2c_speed, uint32
          free(l);
          return NULL;
       }
+      l->config.bus = &l->bus;
+      l->bus_created = true;
    }
+   else
+      l->bus_created = false;
 
-   if(i2c_master_bus_add_device(l->bus, &dev_cfg, &l->device) != ESP_OK)
+   if(i2c_master_bus_add_device(*l->config.bus, &dev_cfg, &l->device) != ESP_OK)
    {
       SERR("I2C initialization failed");
       free(l);
@@ -64,21 +75,22 @@ i2c_lowlevel_context i2c_ll_init(uint8_t i2c_address, uint32_t i2c_speed, uint32
    return (i2c_lowlevel_context) l;
 }
 
-bool i2c_ll_deinit(i2c_lowlevel_context ctx)
+bool SYS_WEAK i2c_ll_deinit(i2c_lowlevel_context ctx)
 {
    esp_i2c_t *l = (esp_i2c_t *) ctx;
-   i2c_del_master_bus(l->bus);
+   if(l->bus_created)
+      i2c_del_master_bus(l->bus);
    free(l);
    return true;
 }
 
-bool i2c_ll_write(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
+bool SYS_WEAK i2c_ll_write(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
 {
    esp_i2c_t *l = (esp_i2c_t *) ctx;
-   return i2c_master_transmit(l->device, data, length, -1);
+   return (i2c_master_transmit(l->device, data, length, -1) == ESP_OK);
 }
 
-bool i2c_ll_write_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint8_t length)
+bool SYS_WEAK i2c_ll_write_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint8_t length)
 {
    esp_i2c_t *l = (esp_i2c_t *) ctx;
    uint8_t *buffer;
@@ -96,14 +108,56 @@ bool i2c_ll_write_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint
    return (result == ESP_OK);
 }
 
-bool i2c_ll_read(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
+bool SYS_WEAK i2c_ll_read(i2c_lowlevel_context ctx, uint8_t *data, uint8_t length)
 {
    esp_i2c_t *l = (esp_i2c_t *) ctx;
    return (i2c_master_receive(l->device, data, length, -1) == ESP_OK);
 }
 
-bool i2c_ll_read_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint8_t length)
+bool SYS_WEAK i2c_ll_read_reg(i2c_lowlevel_context ctx, uint8_t reg, uint8_t *data, uint8_t length)
 {
    esp_i2c_t *l = (esp_i2c_t *) ctx;
    return (i2c_master_transmit_receive(l->device, &reg, 1, data, length, -1) == ESP_OK);
+}
+
+mutex_lowlevel SYS_WEAK sys_mutex_init(void)
+{
+   esp_mutex_t *ctx = malloc(sizeof(*ctx));
+   if(NULL == ctx)
+      return NULL;
+   ctx->mutex = xSemaphoreCreateMutex();
+   if(NULL == ctx->mutex)
+   {
+      free(ctx);
+      return NULL;
+   }
+   return ctx;
+}
+
+bool SYS_WEAK sys_mutex_deinit(mutex_lowlevel mutex)
+{
+   esp_mutex_t *ctx = (esp_mutex_t *) mutex;
+   if(NULL == ctx)
+      return true;
+   free(ctx);
+   return true;
+}
+
+bool SYS_WEAK sys_mutex_lock(mutex_lowlevel mutex)
+{
+   esp_mutex_t *ctx = (esp_mutex_t *) mutex;
+   xSemaphoreTake(ctx->mutex, portMAX_DELAY);
+   return true;
+}
+
+bool SYS_WEAK sys_mutex_unlock(mutex_lowlevel mutex)
+{
+   esp_mutex_t *ctx = (esp_mutex_t *) mutex;
+   xSemaphoreGive(ctx->mutex);
+   return true;
+}
+
+uint64_t SYS_WEAK sys_microsecond_tick(void)
+{
+   return esp_timer_get_time(); /* microseconds since boot */
 }
