@@ -1,3 +1,7 @@
+/*! \copyright 2024 Zorxx Software. All rights reserved.
+ *  \license This file is released under the MIT License. See the LICENSE file for details.
+ *  \brief ds1307 real-time clock device interface
+ */
 #include "helpers.h"
 #include "rtci2c_private.h"
 #include "ds1307.h"
@@ -6,7 +10,7 @@
  * Device-specific Implementation Functions 
  */
 
-static bool ds1307_get_datetime(void *rtci2c_ctx, struct tm *datetime)
+bool ds1307_get_datetime(void *rtci2c_ctx, struct tm *datetime)
 {
    rtci2c_t *r = (rtci2c_t *) rtci2c_ctx;
    uint8_t data[8];
@@ -14,9 +18,9 @@ static bool ds1307_get_datetime(void *rtci2c_ctx, struct tm *datetime)
    if(NULL == datetime)
       return false;
 
-   if(!rtci2c_ll_read(r, DS1307_REG_SECONDS, data, sizeof(data)))
+   if(!i2c_ll_read_reg(r->lowlevel, DS1307_REG_SECONDS, data, sizeof(data)))
    {
-      RTCERR("Failed to query RTC");
+      SERR("Failed to query RTC");
       return false;
    }
 
@@ -38,7 +42,7 @@ static bool ds1307_get_datetime(void *rtci2c_ctx, struct tm *datetime)
    return true;
 }
 
-static bool ds1307_set_datetime(void *rtci2c_ctx, struct tm *datetime)
+bool ds1307_set_datetime(void *rtci2c_ctx, struct tm *datetime)
 {
    rtci2c_t *r = (rtci2c_t *) rtci2c_ctx;
    uint8_t data[8] = {0};
@@ -54,9 +58,9 @@ static bool ds1307_set_datetime(void *rtci2c_ctx, struct tm *datetime)
    data[DS1307_REG_MONTH]      = RTC_DEC_TO_BCD((datetime->tm_mon % 12) + 1);
    data[DS1307_REG_YEAR]       = RTC_DEC_TO_BCD(datetime->tm_year % 100);
 
-   if(!rtci2c_ll_write(r, DS1307_REG_SECONDS, data, sizeof(data)))
+   if(!i2c_ll_write_reg(r->lowlevel, DS1307_REG_SECONDS, data, sizeof(data)))
    {
-      RTCERR("Failed to set RTC");
+      SERR("Failed to set RTC");
       return false;
    }
 
@@ -68,33 +72,33 @@ static bool ds1307_init(void *rtci2c_ctx)
    rtci2c_t *r = (rtci2c_t *) rtci2c_ctx;
    uint8_t data[8]; 
 
-   if(!rtci2c_ll_read(r, DS1307_REG_SECONDS, data, sizeof(data)))
+   if(!i2c_ll_read_reg(r->lowlevel, DS1307_REG_SECONDS, data, sizeof(data)))
    {
-      RTCERR("Failed to query RTC");
+      SERR("[%s] Failed to query RTC", __func__);
       return false;
    }
 
    if(DS1307_REG_GET_BIT(data, SECONDS, SECONDS_CS_BIT))
    {
-      RTCDBG("Clock stopped; starting");
+      SDBG("[%s] Clock stopped; starting", __func__);
       data[0] = 0; /* data */
-      if(!rtci2c_ll_write(r, DS1307_REG_SECONDS, data, 1))
+      if(!i2c_ll_write_reg(r->lowlevel, DS1307_REG_SECONDS, data, 1))
       {
-         RTCERR("Failed to enable clock");
+         SERR("[%s] Failed to enable clock", __func__);
       }
    }
 
    if(DS1307_REG_GET_BIT(data, CONTROL, CONTROL_OUT_BIT))
    {
-      RTCDBG("Disabling square-wave output");
+      SDBG("[%s] Disabling square-wave output", __func__);
       data[0] = 0; /* data */
-      if(!rtci2c_ll_write(r, DS1307_REG_CONTROL, data, 1))
+      if(!i2c_ll_write_reg(r->lowlevel, DS1307_REG_CONTROL, data, 1))
       {
-         RTCERR("Failed to disable output discretes");
+         SERR("[%s] Failed to disable output discretes", __func__);
       }
    }
 
-   RTCDBG("Initialized");
+   SDBG("[%s] Success", __func__);
    return true;
 }
 

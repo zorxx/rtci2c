@@ -1,3 +1,7 @@
+/*! \copyright 2024 Zorxx Software. All rights reserved.
+ *  \license This file is released under the MIT License. See the LICENSE file for details.
+ *  \brief ds1307 real-time clock device interface 
+ */
 #ifndef _DS1307_H
 #define _DS1307_H
 
@@ -62,5 +66,7 @@
    ((data[DS1307_REG_##reg] & (1 << DS1307_REG_##bit)) != 0)
 
 bool ds1307_configure(rtci2c_t *ctx, uint8_t i2c_address);
+bool ds1307_get_datetime(void *rtci2c_ctx, struct tm *datetime);
+bool ds1307_set_datetime(void *rtci2c_ctx, struct tm *datetime);
 
 #endif /* _DS1307_H */
